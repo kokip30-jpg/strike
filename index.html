@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#11151d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Strike">
+<title>Strike · krytý call</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2311151d'/%3E%3Cpath d='M10 44h44' stroke='%23F2A93B' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M14 38l12-12 8 7 16-17' stroke='%23fff' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#11151d; --panel:#181e29; --panel2:#1e2633; --line:#2a3342; --ink:#eef1f6; --muted:#8e98aa;
+  --accent:#f2a93b; --accent-ink:#1a1206; --up:#3ccb7f; --down:#f06a6a; --warn:#f2a93b;
+  --upbg:rgba(60,203,127,.13); --downbg:rgba(240,106,106,.13); --warnbg:rgba(242,169,59,.14);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f1ea; --panel:#ffffff; --panel2:#f8f6f1; --line:#e3ddd1; --ink:#1b1f27; --muted:#6c7382;
+    --accent:#c77a07; --accent-ink:#ffffff; --up:#13844b; --down:#c53545; --warn:#a86300;
+    --upbg:rgba(19,132,75,.1); --downbg:rgba(197,53,69,.1); --warnbg:rgba(199,122,7,.12);
+    color-scheme:light;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;padding-bottom:env(safe-area-inset-bottom)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:max(12px,env(safe-area-inset-top)) 16px 12px}
+.top-in{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.03em}
+.brand i{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-style:normal;font-size:16px}
+.brand small{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0;margin-top:-3px}
+.status{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);text-align:right}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--up);box-shadow:0 0 0 4px var(--upbg)}
+
+main{max-width:980px;margin:0 auto;padding:16px}
+.intro{margin:4px 0 16px}
+.intro h1{font-size:26px;line-height:1.15;letter-spacing:-.03em;margin:0 0 6px}
+.intro p{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
+
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:14px}
+.controls>*{min-width:0}
+.seg button{min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.label{font-size:12px;font-weight:700;color:var(--muted);width:100%;margin-bottom:-2px}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:3px;width:100%}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:9px 6px;font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
+.seg button small{display:block;font-size:11px;font-weight:600;opacity:.8}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 13px;font-weight:600;font-size:13px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.tools{display:flex;gap:8px}
+.tools select{flex:none;max-width:45%}
+.tools input,.tools select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;min-width:0}
+.tools input{flex:1}
+
+.mine{background:var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:14px}
+.mine summary{padding:14px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;list-style:none}
+.mine summary::-webkit-details-marker{display:none}
+.mine summary span{color:var(--muted);font-weight:600;font-size:13px}
+.mine-body{padding:0 14px 14px}
+.mine-form{display:flex;gap:8px;margin-top:6px}
+.mine-form input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;min-width:0;flex:1}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:800;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:700}
+.hold-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.hold-list li{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 12px;font-size:13px}
+.hold-list b{font-weight:800}
+.hold-list button{border:0;background:none;color:var(--muted);font-size:17px;line-height:1;width:24px;height:24px;border-radius:50%}
+.small{font-size:12px;color:var(--muted);margin:10px 0 0}
+
+.count{font-size:13px;color:var(--muted);margin:4px 2px 10px}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px}
+.c-top{display:flex;align-items:baseline;gap:10px}
+.tk{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.px{color:var(--muted);font-size:13px}
+.yl{margin-left:auto;text-align:right;font-weight:800;color:var(--up);font-size:18px;line-height:1.1}
+.yl small{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.strike{margin:10px 0 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.strike b{font-size:22px;letter-spacing:-.02em}
+.strike span{color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 14px;margin:12px 0 2px}
+.grid span{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.grid b{font-size:15px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--panel2);border:1px solid var(--line)}
+.tag.warn{background:var(--warnbg);color:var(--warn);border-color:transparent}
+.tag.up{background:var(--upbg);color:var(--up);border-color:transparent}
+.card details{margin-top:10px}
+.card summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:13px}
+.tbl{overflow-x:auto;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{color:var(--muted);font-weight:600;text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+tr.sel td{font-weight:800;color:var(--accent)}
+.note{color:var(--muted);font-size:12px;margin:8px 0 0}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:16px;padding:22px;color:var(--muted);text-align:center}
+.up{color:var(--up)} .down{color:var(--down)}
+.foot{color:var(--muted);font-size:12px;margin:22px 2px 10px;max-width:70ch}
+.skel{height:170px;border-radius:16px;background:linear-gradient(90deg,var(--panel),var(--panel2),var(--panel));background-size:200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion: reduce){.skel{animation:none}}
+@media (min-width:760px){
+  .controls{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .controls .full{grid-column:1/-1}
+  .list{grid-template-columns:1fr 1fr}
+  .intro h1{font-size:32px}
+}
+@media (max-width:420px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><i>▲</i><div>Strike<small>krytý call</small></div></div>
+    <div class="status"><span id="stTxt">Načítám…</span><span class="dot" id="stDot"></span></div>
+  </div>
+</header>
+
+<main>
+  <section class="intro">
+    <h1>Kde prodat call na akcie, které držíš</h1>
+    <p>Za prodaný call hned inkasuješ prémii. Když cena do expirace nepřekročí strike, prémie i akcie ti zůstanou. Když ho překročí, akcie prodáš za strike. 1 kontrakt = 100 akcií.</p>
+  </section>
+
+  <section class="controls" aria-label="Nastavení">
+    <div>
+      <div class="label">Expirace</div>
+      <div class="seg" id="exp">
+        <button data-v="14" aria-pressed="false">~2 týdny</button>
+        <button data-v="30" aria-pressed="true">~1 měsíc</button>
+        <button data-v="45" aria-pressed="false">~6 týdnů</button>
+      </div>
+    </div>
+    <div>
+      <div class="label">Jak daleko strike</div>
+      <div class="seg" id="risk">
+        <button data-v="kons" aria-pressed="false">Opatrně<small>odkup ~15 %</small></button>
+        <button data-v="vyv" aria-pressed="true">Vyváženě<small>odkup ~25 %</small></button>
+        <button data-v="agr" aria-pressed="false">Víc prémie<small>odkup ~40 %</small></button>
+      </div>
+    </div>
+    <div class="full chips" id="flt">
+      <button class="chip" data-f="mine" aria-pressed="false">Jen moje akcie</button>
+      <button class="chip" data-f="noearn" aria-pressed="false">Bez výsledků před expirací</button>
+      <button class="chip" data-f="liquid" aria-pressed="false">Jen likvidní</button>
+    </div>
+    <div class="full tools">
+      <input id="q" type="search" placeholder="Hledat ticker…" autocomplete="off" spellcheck="false" aria-label="Hledat ticker">
+      <select id="sort" aria-label="Řazení">
+        <option value="ay">Roční výnos</option>
+        <option value="up">Prostor ke strike</option>
+        <option value="d">Nejnižší šance odkupu</option>
+        <option value="t">Abecedně</option>
+      </select>
+    </div>
+  </section>
+
+  <details class="mine" id="mine">
+    <summary>Moje akcie <span id="mineSum">nic zadáno</span></summary>
+    <div class="mine-body">
+      <form class="mine-form" id="mineForm" autocomplete="off">
+        <input id="mTk" placeholder="Ticker" maxlength="10" autocapitalize="characters" spellcheck="false" aria-label="Ticker">
+        <input id="mQty" type="number" min="1" step="1" inputmode="numeric" placeholder="Kusů" aria-label="Počet kusů">
+        <button class="btn" type="submit">Přidat</button>
+      </form>
+      <ul class="hold-list" id="holdList"></ul>
+      <button class="btn ghost" id="importMT" type="button" style="margin-top:10px" hidden>Načíst z portfolia MarketTrace</button>
+      <p class="small">Ukládá se jen v tomto zařízení. U každé akcie pak uvidíš, kolik kontraktů můžeš prodat a kolik za ně dostaneš.</p>
+    </div>
+  </details>
+
+  <p class="count" id="count"></p>
+  <ul class="list" id="list"><li class="skel"></li><li class="skel"></li></ul>
+
+  <p class="foot">Ceny opcí pocházejí z bezplatného zdroje Alpaca a jsou orientační, pokyn zadávej jako limitní. Šance odkupu je odhad podle delty opce. Výnos je počítaný z nabídkové ceny (bid) vůči dnešní ceně akcie. Termíny výsledků hospodaření: Nasdaq. Nejde o investiční doporučení.</p>
+</main>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+const nfc = {};
+const num = (v, d = 2) => v == null || isNaN(v) ? '—' : (nfc[d] ||= new Intl.NumberFormat('cs-CZ', {minimumFractionDigits:d, maximumFractionDigits:d})).format(v);
+const pct = (v, d = 1) => v == null || isNaN(v) ? '—' : (v > 0 ? '+' : '') + num(v, d) + ' %';
+const usd = (v, d = 2) => v == null || isNaN(v) ? '—' : num(v, d) + ' $';
+const dcz = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('cs-CZ', {day:'numeric', month:'numeric'}) : '—';
+const ago = ms => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? 'právě teď' : m < 60 ? `před ${m} min` : m < 1440 ? `před ${Math.floor(m / 60)} h` : new Date(ms).toLocaleDateString('cs-CZ'); };
+
+const RISK = {kons:[.10,.20,.15], vyv:[.20,.32,.25], agr:[.33,.50,.40]};
+const st = {
+  exp: LS.get('st_exp', 30), risk: LS.get('st_risk', 'vyv'), f: new Set(LS.get('st_f', [])),
+  sort: LS.get('st_sort', 'ay'), q: '', data: null, hold: LS.get('st_hold', {})
+};
+
+function mtPortfolio(){
+  const lots = LS.get('mt_port_v2', null) || LS.get('mt_port', null) || [];
+  const h = {};
+  for(const l of lots){ const t = (l.ticker || l.sym || '').toUpperCase(); const q = +(l.qty ?? l.q) || 0; if(t && q) h[t] = (h[t] || 0) + q; }
+  return h;
+}
+function renderHold(){
+  const e = Object.entries(st.hold).sort();
+  $('#holdList').innerHTML = e.map(([t, q]) => `<li><b>${esc(t)}</b> ${num(q, 0)} ks <button type="button" data-del="${esc(t)}" aria-label="Odebrat ${esc(t)}">×</button></li>`).join('');
+  $('#mineSum').textContent = e.length ? `${e.length} ${e.length === 1 ? 'titul' : e.length < 5 ? 'tituly' : 'titulů'}` : 'nic zadáno';
+  $('#importMT').hidden = !Object.keys(mtPortfolio()).length;
+}
+$('#mineForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = $('#mTk').value.trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, ''), q = parseInt($('#mQty').value, 10);
+  if(!t || !(q > 0)) return;
+  st.hold[t] = q; LS.set('st_hold', st.hold); e.target.reset(); renderHold(); render();
+});
+$('#holdList').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if(!b) return;
+  delete st.hold[b.dataset.del]; LS.set('st_hold', st.hold); renderHold(); render();
+});
+$('#importMT').addEventListener('click', () => {
+  Object.assign(st.hold, mtPortfolio()); LS.set('st_hold', st.hold); renderHold(); render();
+});
+
+function seg(id, key){
+  const box = $(id);
+  const sync = () => box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v) === String(st[key])));
+  box.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    st[key] = key === 'exp' ? +b.dataset.v : b.dataset.v; LS.set('st_' + key, st[key]); sync(); render();
+  });
+  sync();
+}
+seg('#exp', 'exp'); seg('#risk', 'risk');
+document.querySelectorAll('#flt [data-f]').forEach(b => b.setAttribute('aria-pressed', st.f.has(b.dataset.f)));
+$('#flt').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]'); if(!b) return;
+  st.f.has(b.dataset.f) ? st.f.delete(b.dataset.f) : st.f.add(b.dataset.f);
+  b.setAttribute('aria-pressed', st.f.has(b.dataset.f)); LS.set('st_f', [...st.f]); render();
+});
+$('#sort').value = st.sort;
+$('#sort').addEventListener('change', e => { st.sort = e.target.value; LS.set('st_sort', st.sort); render(); });
+$('#q').addEventListener('input', e => { st.q = e.target.value.trim().toUpperCase(); render(); });
+
+function metrics(c, S, n){
+  return {...c, y: c.b / S * 100, ay: c.b / S * 365 / n * 100, up: (c.k - S) / S * 100, mx: (c.k - S + c.b) / S * 100, pr: c.b / S * 100};
+}
+function pick(chain, S, n){
+  const [lo, hi, t] = RISK[st.risk];
+  const liquid = x => x.b >= 0.05 && (x.sp == null || x.sp <= (st.f.has('liquid') ? 10 : 25));
+  const good = chain.filter(x => x.d >= lo && x.d <= hi && liquid(x));
+  if(!good.length) return null;
+  return metrics(good.slice().sort((a, b) => Math.abs(a.d - t) - Math.abs(b.d - t))[0], S, n);
+}
+function render(){
+  if(!st.data) return;
+  let rows = [];
+  for(const r of st.data.rows){
+    const x = r.x.slice().sort((a, b) => Math.abs(a.n - st.exp) - Math.abs(b.n - st.exp))[0];
+    if(!x) continue;
+    const p = pick(x.c, r.s, x.n);
+    if(!p) continue;
+    const earnBefore = r.er && r.er.d <= x.e;
+    rows.push({...r, x, p, earnBefore});
+  }
+  const total = rows.length;
+  if(st.f.has('mine')) rows = rows.filter(r => st.hold[r.t]);
+  if(st.f.has('noearn')) rows = rows.filter(r => !r.earnBefore);
+  if(st.q) rows = rows.filter(r => r.t.includes(st.q));
+  const s = st.sort;
+  rows.sort((a, b) => s === 't' ? a.t.localeCompare(b.t) : s === 'd' ? a.p.d - b.p.d : b.p[s] - a.p[s]);
+  $('#count').textContent = `${rows.length} z ${total} titulů`;
+  if(!rows.length){
+    $('#list').innerHTML = `<li class="empty">${st.f.has('mine') && !Object.keys(st.hold).length ? 'Zadej nahoře v sekci Moje akcie, co držíš.' : 'Tomuto výběru nic neodpovídá.'}</li>`;
+    return;
+  }
+  $('#list').innerHTML = rows.map(r => {
+    const c = r.p, qty = st.hold[r.t] || 0, n = Math.floor(qty / 100);
+    const chg = r.pc ? (r.s - r.pc) / r.pc * 100 : null;
+    const tags = [];
+    if(r.earnBefore) tags.push(`<span class="tag warn">Výsledky ${dcz(r.er.d)}${r.er.h === 'pre' ? ' před otevřením' : r.er.h === 'post' ? ' po zavření' : ''}, před expirací</span>`);
+    if(c.sp > 10) tags.push(`<span class="tag warn">Široký spread ${num(c.sp, 0)} %</span>`);
+    if(n >= 1) tags.push(`<span class="tag up">${n} ${n === 1 ? 'kontrakt' : n < 5 ? 'kontrakty' : 'kontraktů'} · ${usd(n * c.b * 100, 0)}</span>`);
+    else if(qty) tags.push('<span class="tag">Máš méně než 100 akcií</span>');
+    const others = r.x.c.filter(x => x.b >= 0.05 && x.d <= 0.65).map(x => { const m = metrics(x, r.s, r.x.n); return `<tr class="${x.k === c.k ? 'sel' : ''}">
+        <td>${num(x.k)}</td><td>${num(x.b)}</td><td>${num(m.y)} %</td><td>${num(m.ay, 0)} %</td><td>${pct(m.up)}</td><td>${num(x.d * 100, 0)} %</td></tr>`; }).join('');
+    return `<li class="card">
+      <div class="c-top"><span class="tk">${esc(r.t)}</span><span class="px">${usd(r.s)} <span class="${chg > 0 ? 'up' : chg < 0 ? 'down' : ''}">${pct(chg)}</span></span>
+        <span class="yl">${num(c.ay, 1)} %<small>ročně</small></span></div>
+      <div class="strike"><b>Strike ${num(c.k)} $</b><span>expirace ${dcz(r.x.e)} · ${r.x.n} dní</span></div>
+      <div class="grid">
+        <div><span>Prémie za akcii</span><b>${usd(c.b)}</b></div>
+        <div><span>Za 1 kontrakt</span><b>${usd(c.b * 100, 0)}</b></div>
+        <div><span>Výnos za období</span><b>${num(c.y)} %</b></div>
+        <div><span>Prostor ke strike</span><b>${pct(c.up)}</b></div>
+        <div><span>Max. výnos při odkupu</span><b>${pct(c.mx)}</b></div>
+        <div><span>Šance odkupu</span><b>${num(c.d * 100, 0)} %</b></div>
+      </div>
+      ${tags.length ? `<div class="tags">${tags.join('')}</div>` : ''}
+      <details><summary>Všechny striky</summary>
+        <div class="tbl"><table><thead><tr><th>Strike</th><th>Bid</th><th>Výnos</th><th>Ročně</th><th>Prostor</th><th>Odkup</th></tr></thead><tbody>${others}</tbody></table></div>
+        <p class="note">Prémie chrání před poklesem o ${num(c.pr)} %. ${c.iv ? `Implikovaná volatilita ${num(c.iv, 0)} %. ` : ''}Nabídka ${num(c.b)} $, poptávka ${num(c.a)} $.</p>
+      </details>
+    </li>`;
+  }).join('');
+}
+
+async function load(){
+  try{
+    const r = await fetch('data/options.json?v=' + Math.floor(Date.now() / 120000), {cache:'no-cache'});
+    if(!r.ok) throw 0;
+    const d = await r.json();
+    if(d.error){ throw d.error; }
+    st.data = d;
+    const t = new Date(d.updated).getTime();
+    $('#stTxt').textContent = 'Aktualizováno ' + ago(t);
+    $('#stDot').className = 'dot' + (Date.now() - t < 20 * 60000 ? ' live' : '');
+    render();
+  }catch(e){
+    $('#stTxt').textContent = 'Data nejsou k dispozici';
+    if(!st.data) $('#list').innerHTML = `<li class="empty">${typeof e === 'string' ? esc(e) + '. ' : ''}Opce se stahují, zkus to za pár minut.</li>`;
+  }
+}
+renderHold();
+load();
+setInterval(load, 5 * 60000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>

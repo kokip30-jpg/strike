@@ -1,0 +1,73 @@
+name: Opce – sken a nasazení
+
+on:
+  schedule:
+    - cron: '*/10 13-21 * * 1-5'   # během obchodování v USA každých 10 minut
+    - cron: '30 6,11 * * 1-5'      # ráno a v poledne našeho času
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: opce
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Načíst uložená data
+        run: |
+          if git fetch -q --depth=1 origin data; then
+            rm -rf data && git archive FETCH_HEAD data | tar -x
+          fi
+          mkdir -p data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sken opcí
+        env:
+          ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
+          ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
+        run: python scripts/scan.py
+
+      - name: Uložit data (větev data, jen poslední verze)
+        env:
+          TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          tmp=$(mktemp -d); cp -r data "$tmp/"; cd "$tmp"
+          git init -q -b data; git add data
+          git -c user.name="strike-bot" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Data $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${REPO}.git" data
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - if: steps.deploy.outcome == 'failure'
+        run: sleep 45
+
+      - if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v4
