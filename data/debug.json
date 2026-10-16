@@ -1,0 +1,1 @@
+{"errors":[{"url":"https://data.alpaca.markets/v2/stocks/snapshots?symbols=NVDA%2CAAPL%2CMSFT%2CAMZN%2CTSLA%2CAMD%2CGOOGL%2CMETA%2CAVGO%2CNFLX%2CPLTR%2CJPM%2CV","code":401},{"url":"https://data.alpaca.markets/v2/stocks/snapshots?symbols=TSM%2CASML%2CQCOM%2CMRVL%2CCRWV%2CNBIS%2CAI%2CCRWD%2CPANW%2CNET%2CSHOP%2COKLO%2CSMR%","code":401}]}
